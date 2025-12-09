@@ -1,6 +1,6 @@
-# Hyperliquid Real-Time Indexer
+# Hyperliquid Indexer
 
-A real-time blockchain indexer for Hyperliquid that fetches data directly from APIs without database storage. Provides both CLI and web interface for monitoring blocks, transactions, validators, vaults, and transfers.
+A blockchain indexer for Hyperliquid that fetches data directly from APIs without database storage. Provides both CLI and web interface for monitoring blocks, transactions, validators, vaults, and transfers.
 
 ## Features
 
