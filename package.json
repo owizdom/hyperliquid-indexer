@@ -1,0 +1,42 @@
+{
+  "name": "hyperliquid-indexer",
+  "version": "1.0.0",
+  "description": "Hyperliquid blockchain data indexer with CLI and web interface",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "cli": "tsx src/cli.ts",
+    "web": "tsx src/web.ts",
+    "index": "tsx src/indexer.ts"
+  },
+  "keywords": [
+    "hyperliquid",
+    "indexer",
+    "blockchain",
+    "defi"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@nktkas/hyperliquid": "^0.29.1",
+    "axios": "^1.6.0",
+    "chalk": "^5.3.0",
+    "commander": "^11.1.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-ws": "^5.0.2",
+    "parquetjs": "^0.11.2",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/express-ws": "^3.0.6",
+    "@types/node": "^20.10.0",
+    "@types/ws": "^8.5.10",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

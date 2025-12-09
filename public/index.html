@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hyperliquid Indexer Terminal</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --pink: #ff006e;
+            --pink-bright: #ff1493;
+            --pink-light: #ff69b4;
+            --bg-black: #0a0a0a;
+            --bg-dark: #1a1a1a;
+            --bg-darker: #0f0f0f;
+            --text: #00ff88;
+            --text-dim: #00cc6a;
+            --text-muted: #888;
+            --border: rgba(255, 0, 110, 0.3);
+            --glow: rgba(255, 0, 110, 0.5);
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            background: var(--bg-black);
+            color: var(--text);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        .terminal-container {
+            max-width: 100%;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .terminal-header {
+            background: var(--bg-dark);
+            border: 2px solid var(--border);
+            border-bottom: none;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 0 20px var(--glow);
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--pink);
+            box-shadow: 0 0 10px var(--pink);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .terminal-title {
+            color: var(--pink);
+            font-weight: 700;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .terminal-status {
+            margin-left: auto;
+            color: var(--text-dim);
+            font-size: 12px;
+        }
+
+        .terminal-window {
+            background: var(--bg-darker);
+            border: 2px solid var(--border);
+            border-top: none;
+            min-height: calc(100vh - 100px);
+            padding: 20px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+            overflow-y: auto;
+        }
+
+        .terminal-window::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .terminal-window::-webkit-scrollbar-track {
+            background: var(--bg-black);
+        }
+
+        .terminal-window::-webkit-scrollbar-thumb {
+            background: var(--pink);
+            border-radius: 4px;
+        }
+
+        .terminal-prompt {
+            color: var(--pink);
+            font-weight: 600;
+        }
+
+        .terminal-command {
+            color: var(--text);
+            margin: 10px 0;
+        }
+
+        .terminal-output {
+            margin: 15px 0 25px 0;
+            padding-left: 20px;
+        }
+
+        .section-header {
+            color: var(--pink-bright);
+            font-weight: 700;
+            font-size: 16px;
+            margin: 30px 0 15px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-box {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            padding: 15px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            color: var(--pink-light);
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .data-table {
+            width: 100%;
+            margin: 15px 0;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .data-table th {
+            background: var(--bg-dark);
+            color: var(--pink);
+            padding: 10px;
+            text-align: left;
+            border: 1px solid var(--border);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 11px;
+        }
+
+        .data-table td {
+            padding: 10px;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            word-break: break-all;
+        }
+
+        .data-table tr {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .data-table tr:hover {
+            background: rgba(255, 0, 110, 0.15);
+            transform: translateX(2px);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            background: var(--bg-darker);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 0 50px var(--glow);
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-title {
+            color: var(--pink);
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .modal-close {
+            background: var(--pink);
+            color: var(--bg-black);
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: 600;
+            border-radius: 4px;
+            transition: all 0.2s;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .modal-close:hover {
+            background: var(--pink-bright);
+            transform: scale(1.05);
+        }
+
+        .modal-body {
+            color: var(--text);
+        }
+
+        .detail-row {
+            display: flex;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 0, 110, 0.1);
+        }
+
+        .detail-label {
+            color: var(--pink-light);
+            font-weight: 600;
+            min-width: 150px;
+            margin-right: 20px;
+        }
+
+        .detail-value {
+            color: var(--text);
+            word-break: break-all;
+            flex: 1;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+
+        .detail-value pre {
+            background: var(--bg-dark);
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 5px 0;
+            border: 1px solid var(--border);
+        }
+
+        .hash-cell {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--pink-light);
+            font-size: 11px;
+        }
+
+        .address-cell {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text);
+            font-size: 11px;
+        }
+
+        .action-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: rgba(255, 0, 110, 0.2);
+            border: 1px solid var(--pink);
+            color: var(--pink-light);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 2px;
+        }
+
+        .timestamp {
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        .loading {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .error {
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid #ff4444;
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        .success {
+            color: var(--text);
+        }
+
+        .blink {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+            margin-bottom: -2px;
+        }
+
+        .tab:hover {
+            color: var(--pink-light);
+        }
+
+        .tab.active {
+            color: var(--pink);
+            border-bottom-color: var(--pink);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .json-view {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 11px;
+            overflow-x: auto;
+            color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .refresh-btn {
+            background: var(--bg-dark);
+            border: 1px solid var(--pink);
+            color: var(--pink);
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+            margin: 10px 0;
+        }
+
+        .refresh-btn:hover {
+            background: var(--pink);
+            color: var(--bg-black);
+            box-shadow: 0 0 10px var(--glow);
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .data-table {
+                font-size: 10px;
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal-container">
+        <div class="terminal-header">
+            <div class="terminal-dot"></div>
+            <div class="terminal-title">Hyperliquid Indexer Terminal By Wisdom</div>
+            <div class="terminal-status" id="status">SYNCING...</div>
+        </div>
+        
+        <div class="terminal-window">
+            <div class="terminal-prompt">$</div>
+            <div class="terminal-command">hyperliquid-indexer --status</div>
+            <div class="terminal-output">
+                <div class="tabs">
+                    <button class="tab active" onclick="showTab('blocks')">BLOCKS</button>
+                    <button class="tab" onclick="showTab('validators')">VALIDATORS</button>
+                    <button class="tab" onclick="showTab('vaults')">VAULTS</button>
+                    <button class="tab" onclick="showTab('transfers')">TRANSFERS</button>
+                </div>
+
+                <div id="tab-blocks" class="tab-content active">
+                    <div class="section-header">Blocks</div>
+                    <button class="refresh-btn" onclick="loadBlocks()">REFRESH</button>
+                    <div id="blocks-content" class="loading">Loading blocks...</div>
+                </div>
+
+                <div id="tab-validators" class="tab-content">
+                    <div class="section-header">Validators</div>
+                    <button class="refresh-btn" onclick="loadValidators()">REFRESH</button>
+                    <div id="validators-content" class="loading">Loading validators...</div>
+                </div>
+
+                <div id="tab-vaults" class="tab-content">
+                    <div class="section-header">Vaults</div>
+                    <button class="refresh-btn" onclick="loadVaults()">REFRESH</button>
+                    <div id="vaults-content" class="loading">Loading vaults...</div>
+                </div>
+
+                <div id="tab-transfers" class="tab-content">
+                    <div class="section-header">Transfers</div>
+                    <button class="refresh-btn" onclick="loadTransfers()">REFRESH</button>
+                    <div id="transfers-content" class="loading">Loading transfers...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="details-modal" class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-title">Details</div>
+                <button class="modal-close" onclick="closeModal()">CLOSE</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <div class="loading">Loading details...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+
+        async function fetchAPI(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (error) {
+                console.error('API Error:', error);
+                throw error;
+            }
+        }
+
+        function formatHash(hash) {
+            if (!hash) return 'N/A';
+            return hash.substring(0, 10) + '...' + hash.substring(hash.length - 8);
+        }
+
+        function formatAddress(addr) {
+            if (!addr) return 'N/A';
+            return addr.substring(0, 8) + '...' + addr.substring(addr.length - 6);
+        }
+
+        function formatRelativeTime(timestamp) {
+            const now = Date.now();
+            const seconds = Math.floor((now - timestamp) / 1000);
+
+            if (seconds < 60) return `${seconds} sec ago`;
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes} min ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+            const days = Math.floor(hours / 24);
+            if (days < 30) return `${days} day${days > 1 ? 's' : ''} ago`;
+            const months = Math.floor(days / 30);
+            if (months < 12) return `${months} month${months > 1 ? 's' : ''} ago`;
+            const years = Math.floor(months / 12);
+            return `${years} year${years > 1 ? 's' : ''} ago`;
+        }
+
+        function formatTimestamp(ts) {
+            if (!ts) return 'N/A';
+            // If timestamp is already in milliseconds, use as is, otherwise multiply by 1000
+            const timestamp = ts > 1e12 ? ts : ts * 1000;
+            return formatRelativeTime(timestamp);
+        }
+
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(2) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(2) + 'K';
+            return num.toLocaleString();
+        }
+
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        async function loadStats() {
+            try {
+                // Stats card removed - just update status
+                document.getElementById('status').textContent = 'ONLINE';
+                document.getElementById('status').classList.add('success');
+            } catch (error) {
+                document.getElementById('status').textContent = 'ERROR';
+                document.getElementById('status').style.color = '#ff4444';
+            }
+        }
+
+        async function loadBlocks() {
+            const container = document.getElementById('blocks-content');
+            
+            // Show loading state
+            if (!container.dataset.loading) {
+                container.innerHTML = '<span class="loading">Loading blocks...</span>';
+                container.dataset.loading = 'true';
+            }
+
+            try {
+                const blocks = await fetchAPI('/blocks?limit=50');
+                
+                if (blocks.length === 0) {
+                    container.innerHTML = '<div class="error">No blocks indexed yet. The indexer is starting...</div>';
+                    container.dataset.loading = 'false';
+                    return;
+                }
+
+                // Sort blocks by timestamp descending (newest first)
+                blocks.sort((a, b) => b.timestamp - a.timestamp);
+
+                let html = '<table class="data-table"><thead><tr><th>Height</th><th>Time</th><th>Hash</th><th>Transactions</th></tr></thead><tbody>';
+                
+                blocks.forEach((block, index) => {
+                    html += `
+                        <tr style="animation: fadeIn 0.3s ease-in ${index * 0.02}s both;" onclick="showBlockDetails(${block.blockNumber}, '${block.blockHash}')">
+                            <td style="color: var(--pink-light); font-weight: 600;">${block.blockNumber}</td>
+                            <td class="timestamp" data-timestamp="${block.timestamp}">${formatTimestamp(block.timestamp)}</td>
+                            <td class="hash-cell">${formatHash(block.blockHash)}</td>
+                            <td style="color: var(--text);">${block.txCount}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table>';
+                container.innerHTML = html;
+                container.dataset.loading = 'false';
+            } catch (error) {
+                container.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                container.dataset.loading = 'false';
+            }
+        }
+
+        async function loadTransactions() {
+            const container = document.getElementById('transactions-content');
+            
+            if (!container.dataset.loading) {
+                container.innerHTML = '<span class="loading">Loading transactions...</span>';
+                container.dataset.loading = 'true';
+            }
+
+            try {
+                const transactions = await fetchAPI('/transactions?limit=100');
+                
+                if (transactions.length === 0) {
+                    container.innerHTML = '<div class="error">No transactions indexed yet</div>';
+                    container.dataset.loading = 'false';
+                    return;
+                }
+
+                // Sort transactions by timestamp descending (newest first)
+                transactions.sort((a, b) => (b.timestamp || b.blockTimestamp || 0) - (a.timestamp || a.blockTimestamp || 0));
+
+                let html = '<table class="data-table"><thead><tr><th>Hash</th><th>Block</th><th>User</th><th>Action</th><th>Status</th><th>Time</th></tr></thead><tbody>';
+                
+                transactions.forEach((tx, index) => {
+                    const status = tx.error ? '<span style="color: #ff4444">FAILED</span>' : '<span style="color: var(--text)">SUCCESS</span>';
+                    html += `
+                        <tr style="animation: fadeIn 0.3s ease-in ${index * 0.015}s both;" onclick="showTransactionDetails('${tx.hash}')">
+                            <td class="hash-cell">${formatHash(tx.hash)}</td>
+                            <td style="color: var(--text);">${tx.blockNumber}</td>
+                            <td class="address-cell">${formatAddress(tx.user)}</td>
+                            <td><span class="action-badge">${tx.actionType || 'unknown'}</span></td>
+                            <td>${status}</td>
+                            <td class="timestamp" data-timestamp="${tx.timestamp || tx.blockTimestamp || 0}">${formatTimestamp(tx.timestamp || tx.blockTimestamp || 0)}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table>';
+                container.innerHTML = html;
+                container.dataset.loading = 'false';
+            } catch (error) {
+                container.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                container.dataset.loading = 'false';
+            }
+        }
+
+
+        // WebSocket connection for real-time updates
+        let ws = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                reconnectAttempts = 0;
+                document.getElementById('status').textContent = 'ONLINE';
+                document.getElementById('status').classList.add('success');
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    handleRealtimeUpdate(message);
+                } catch (error) {
+                    console.error('Error parsing WebSocket message:', error);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                document.getElementById('status').textContent = 'RECONNECTING...';
+                document.getElementById('status').style.color = '#ffaa00';
+                
+                // Reconnect with exponential backoff
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    setTimeout(() => {
+                        connectWebSocket();
+                    }, Math.min(1000 * Math.pow(2, reconnectAttempts), 10000));
+                }
+            };
+        }
+
+        function handleRealtimeUpdate(message) {
+            switch (message.type) {
+                case 'newBlocks':
+                    addNewBlocksToTable(message.data);
+                    break;
+                case 'newTransactions':
+                    addNewTransactionsToTable(message.data);
+                    break;
+                case 'newValidators':
+                    updateValidatorsTable(message.data);
+                    break;
+                case 'newVaults':
+                    updateVaultsTable(message.data);
+                    break;
+                case 'newTransfers':
+                    updateTransfersTable(message.data);
+                    break;
+                case 'stats':
+                    // Stats card removed
+                    break;
+            }
+        }
+
+        function addNewBlocksToTable(newBlocks) {
+            const tbody = document.querySelector('#blocks-content table tbody');
+            if (!tbody) {
+                loadBlocks();
+                return;
+            }
+
+            // Sort new blocks by timestamp descending (newest first)
+            newBlocks.sort((a, b) => b.timestamp - a.timestamp);
+
+            // Rebuild table to maintain sorted order
+            const allBlocks = Array.from(tbody.children).map(row => {
+                const timestampCell = row.querySelector('.timestamp');
+                const timestamp = timestampCell ? parseFloat(timestampCell.getAttribute('data-timestamp') || '0') : 0;
+                return { row, timestamp };
+            });
+
+            // Add new blocks to the list
+            newBlocks.forEach(block => {
+                allBlocks.push({ 
+                    row: null, 
+                    timestamp: block.timestamp,
+                    block: block
+                });
+            });
+
+            // Sort all by timestamp descending
+            allBlocks.sort((a, b) => b.timestamp - a.timestamp);
+
+            // Clear and rebuild
+            tbody.innerHTML = '';
+
+            allBlocks.forEach((item, index) => {
+                let row;
+                if (item.row) {
+                    row = item.row;
+                } else {
+                    row = document.createElement('tr');
+                    row.style.animation = `fadeIn 0.3s ease-in ${index * 0.02}s both`;
+                    row.style.background = 'rgba(255, 0, 110, 0.1)';
+                    setTimeout(() => {
+                        row.style.background = 'transparent';
+                    }, 2000);
+                    
+                    row.setAttribute('onclick', `showBlockDetails(${item.block.blockNumber}, '${item.block.blockHash}')`);
+                    row.innerHTML = `
+                        <td style="color: var(--pink-light); font-weight: 600;">${item.block.blockNumber}</td>
+                        <td class="timestamp" data-timestamp="${item.block.timestamp}">${formatTimestamp(item.block.timestamp)}</td>
+                        <td class="hash-cell">${formatHash(item.block.blockHash)}</td>
+                        <td style="color: var(--text);">${item.block.txCount}</td>
+                    `;
+                }
+                tbody.appendChild(row);
+            });
+
+            // Remove old rows if too many
+            while (tbody.children.length > 50) {
+                tbody.removeChild(tbody.lastChild);
+            }
+        }
+
+        function addNewTransactionsToTable(newTransactions) {
+            const tbody = document.querySelector('#transactions-content table tbody');
+            if (!tbody) {
+                loadTransactions();
+                return;
+            }
+
+            // Sort new transactions by timestamp descending (newest first)
+            newTransactions.sort((a, b) => (b.timestamp || b.blockTimestamp || 0) - (a.timestamp || a.blockTimestamp || 0));
+
+            // Rebuild table to maintain sorted order
+            const allTransactions = Array.from(tbody.children).map(row => {
+                const timestampCell = row.querySelector('.timestamp');
+                const timestamp = timestampCell ? parseFloat(timestampCell.getAttribute('data-timestamp') || '0') : 0;
+                return { row, timestamp };
+            });
+
+            // Add new transactions to the list
+            newTransactions.forEach(tx => {
+                allTransactions.push({ 
+                    row: null, 
+                    timestamp: tx.timestamp || tx.blockTimestamp || 0,
+                    tx: tx
+                });
+            });
+
+            // Sort all by timestamp descending
+            allTransactions.sort((a, b) => b.timestamp - a.timestamp);
+
+            // Clear and rebuild
+            tbody.innerHTML = '';
+
+            allTransactions.forEach((item, index) => {
+                let row;
+                if (item.row) {
+                    row = item.row;
+                } else {
+                    const status = item.tx.error ? '<span style="color: #ff4444">FAILED</span>' : '<span style="color: var(--text)">SUCCESS</span>';
+                    row = document.createElement('tr');
+                    row.style.animation = `fadeIn 0.3s ease-in ${index * 0.015}s both`;
+                    row.style.background = 'rgba(255, 0, 110, 0.1)';
+                    setTimeout(() => {
+                        row.style.background = 'transparent';
+                    }, 2000);
+                    
+                    row.setAttribute('onclick', `showTransactionDetails('${item.tx.hash}')`);
+                    const txTimestamp = item.tx.timestamp || item.tx.blockTimestamp || 0;
+                    row.innerHTML = `
+                        <td class="hash-cell">${formatHash(item.tx.hash)}</td>
+                        <td style="color: var(--text);">${item.tx.blockNumber}</td>
+                        <td class="address-cell">${formatAddress(item.tx.user)}</td>
+                        <td><span class="action-badge">${item.tx.actionType || 'unknown'}</span></td>
+                        <td>${status}</td>
+                        <td class="timestamp" data-timestamp="${txTimestamp}">${formatTimestamp(txTimestamp)}</td>
+                    `;
+                }
+                tbody.appendChild(row);
+            });
+
+            // Remove old rows if too many
+            while (tbody.children.length > 100) {
+                tbody.removeChild(tbody.lastChild);
+            }
+        }
+
+
+        function addNewTradesToTable(newTrades) {
+            const tbody = document.querySelector('#trades-content table tbody');
+            if (!tbody) return;
+
+            newTrades.forEach((trade, index) => {
+                const side = trade.side === 'buy' ? 
+                    `<span style="color: var(--text)">BUY</span>` :
+                    `<span style="color: #ff4444">SELL</span>`;
+                const row = document.createElement('tr');
+                row.style.animation = `fadeIn 0.3s ease-in ${index * 0.015}s both`;
+                row.style.background = 'rgba(255, 0, 110, 0.1)';
+                setTimeout(() => {
+                    row.style.background = 'transparent';
+                }, 2000);
+                
+                row.innerHTML = `
+                    <td style="color: var(--pink-light); font-weight: 600;">${trade.symbol}</td>
+                    <td>${side}</td>
+                    <td style="color: var(--text);">$${parseFloat(trade.price).toFixed(4)}</td>
+                    <td style="color: var(--text-dim);">${parseFloat(trade.size).toFixed(4)}</td>
+                    <td class="hash-cell">${formatHash(trade.txHash || 'N/A')}</td>
+                    <td class="timestamp">${formatTimestamp(trade.timestamp / 1000)}</td>
+                `;
+                
+                tbody.insertBefore(row, tbody.firstChild);
+                
+                // Remove old rows if too many
+                while (tbody.children.length > 100) {
+                    tbody.removeChild(tbody.lastChild);
+                }
+            });
+        }
+
+        function updateValidatorsTable(validators) {
+            const tbody = document.querySelector('#validators-content table tbody');
+            if (!tbody) {
+                loadValidators();
+                return;
+            }
+
+            validators.sort((a, b) => b.timestamp - a.timestamp);
+            tbody.innerHTML = '';
+            
+            validators.forEach((validator, index) => {
+                const row = document.createElement('tr');
+                row.style.animation = `fadeIn 0.3s ease-in ${index * 0.02}s both`;
+                row.innerHTML = `
+                    <td class="hash-cell">${formatAddress(validator.address)}</td>
+                    <td style="color: var(--text);">${validator.status || 'unknown'}</td>
+                    <td style="color: var(--pink-light);">${formatNumber(validator.votingPower || 0)}</td>
+                    <td style="color: var(--text-dim);">${(validator.uptime || 0).toFixed(2)}%</td>
+                    <td class="timestamp" data-timestamp="${validator.timestamp}">${formatTimestamp(validator.timestamp)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateVaultsTable(vaults) {
+            const tbody = document.querySelector('#vaults-content table tbody');
+            if (!tbody) {
+                loadVaults();
+                return;
+            }
+
+            vaults.sort((a, b) => b.timestamp - a.timestamp);
+            tbody.innerHTML = '';
+            
+            vaults.forEach((vault, index) => {
+                const row = document.createElement('tr');
+                row.style.animation = `fadeIn 0.3s ease-in ${index * 0.02}s both`;
+                row.innerHTML = `
+                    <td class="hash-cell">${formatAddress(vault.address)}</td>
+                    <td style="color: var(--pink-light); font-weight: 600;">${vault.name || 'N/A'}</td>
+                    <td style="color: var(--text);">$${formatNumber(vault.equity || 0)}</td>
+                    <td style="color: var(--text-dim);">$${formatNumber(vault.totalDeposits || 0)}</td>
+                    <td style="color: var(--text-dim);">$${formatNumber(vault.totalWithdrawals || 0)}</td>
+                    <td class="timestamp" data-timestamp="${vault.timestamp}">${formatTimestamp(vault.timestamp)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateTransfersTable(transfers) {
+            const tbody = document.querySelector('#transfers-content table tbody');
+            if (!tbody) {
+                loadTransfers();
+                return;
+            }
+
+            transfers.sort((a, b) => b.timestamp - a.timestamp);
+            tbody.innerHTML = '';
+            
+            transfers.forEach((transfer, index) => {
+                const row = document.createElement('tr');
+                row.style.animation = `fadeIn 0.3s ease-in ${index * 0.015}s both`;
+                row.innerHTML = `
+                    <td class="hash-cell">${formatHash(transfer.hash)}</td>
+                    <td style="color: var(--pink-light); font-weight: 600;">${transfer.blockNumber || 'N/A'}</td>
+                    <td class="hash-cell">${formatAddress(transfer.from)}</td>
+                    <td class="hash-cell">${formatAddress(transfer.to)}</td>
+                    <td style="color: var(--text);">${transfer.token || 'N/A'}</td>
+                    <td style="color: var(--text-dim);">${formatNumber(transfer.amount || 0)}</td>
+                    <td class="timestamp" data-timestamp="${transfer.timestamp}">${formatTimestamp(transfer.timestamp)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateStats(stats) {
+            // Stats card removed - no longer needed
+        }
+
+        async function loadValidators() {
+            const container = document.getElementById('validators-content');
+            
+            if (!container.dataset.loading) {
+                container.innerHTML = '<span class="loading">Loading validators...</span>';
+                container.dataset.loading = 'true';
+            }
+
+            try {
+                const validators = await fetchAPI('/validators?limit=100');
+                
+                if (validators.length === 0) {
+                    container.innerHTML = '<div class="error">No validators indexed yet</div>';
+                    container.dataset.loading = 'false';
+                    return;
+                }
+
+                validators.sort((a, b) => b.timestamp - a.timestamp);
+
+                let html = '<table class="data-table"><thead><tr><th>Address</th><th>Status</th><th>Voting Power</th><th>Uptime</th><th>Time</th></tr></thead><tbody>';
+                
+                validators.forEach((validator, index) => {
+                    html += `
+                        <tr style="animation: fadeIn 0.3s ease-in ${index * 0.02}s both;">
+                            <td class="hash-cell">${formatAddress(validator.address)}</td>
+                            <td style="color: var(--text);">${validator.status || 'unknown'}</td>
+                            <td style="color: var(--pink-light);">${formatNumber(validator.votingPower || 0)}</td>
+                            <td style="color: var(--text-dim);">${(validator.uptime || 0).toFixed(2)}%</td>
+                            <td class="timestamp" data-timestamp="${validator.timestamp}">${formatTimestamp(validator.timestamp)}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table>';
+                container.innerHTML = html;
+                container.dataset.loading = 'false';
+            } catch (error) {
+                container.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                container.dataset.loading = 'false';
+            }
+        }
+
+        async function loadVaults() {
+            const container = document.getElementById('vaults-content');
+            
+            if (!container.dataset.loading) {
+                container.innerHTML = '<span class="loading">Loading vaults...</span>';
+                container.dataset.loading = 'true';
+            }
+
+            try {
+                const vaults = await fetchAPI('/vaults?limit=100');
+                
+                if (vaults.length === 0) {
+                    container.innerHTML = '<div class="error">No vaults indexed yet</div>';
+                    container.dataset.loading = 'false';
+                    return;
+                }
+
+                vaults.sort((a, b) => b.timestamp - a.timestamp);
+
+                let html = '<table class="data-table"><thead><tr><th>Address</th><th>Name</th><th>Equity</th><th>Deposits</th><th>Withdrawals</th><th>Time</th></tr></thead><tbody>';
+                
+                vaults.forEach((vault, index) => {
+                    html += `
+                        <tr style="animation: fadeIn 0.3s ease-in ${index * 0.02}s both;">
+                            <td class="hash-cell">${formatAddress(vault.address)}</td>
+                            <td style="color: var(--pink-light); font-weight: 600;">${vault.name || 'N/A'}</td>
+                            <td style="color: var(--text);">$${formatNumber(vault.equity || 0)}</td>
+                            <td style="color: var(--text-dim);">$${formatNumber(vault.totalDeposits || 0)}</td>
+                            <td style="color: var(--text-dim);">$${formatNumber(vault.totalWithdrawals || 0)}</td>
+                            <td class="timestamp" data-timestamp="${vault.timestamp}">${formatTimestamp(vault.timestamp)}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table>';
+                container.innerHTML = html;
+                container.dataset.loading = 'false';
+            } catch (error) {
+                container.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                container.dataset.loading = 'false';
+            }
+        }
+
+        async function loadTransfers() {
+            const container = document.getElementById('transfers-content');
+            
+            if (!container.dataset.loading) {
+                container.innerHTML = '<span class="loading">Loading transfers...</span>';
+                container.dataset.loading = 'true';
+            }
+
+            try {
+                const transfers = await fetchAPI('/transfers?limit=100');
+                
+                if (transfers.length === 0) {
+                    container.innerHTML = '<div class="error">No transfers indexed yet</div>';
+                    container.dataset.loading = 'false';
+                    return;
+                }
+
+                transfers.sort((a, b) => b.timestamp - a.timestamp);
+
+                let html = '<table class="data-table"><thead><tr><th>Hash</th><th>Block</th><th>From</th><th>To</th><th>Token</th><th>Amount</th><th>Time</th></tr></thead><tbody>';
+                
+                transfers.forEach((transfer, index) => {
+                    html += `
+                        <tr style="animation: fadeIn 0.3s ease-in ${index * 0.015}s both;">
+                            <td class="hash-cell">${formatHash(transfer.hash)}</td>
+                            <td style="color: var(--pink-light); font-weight: 600;">${transfer.blockNumber || 'N/A'}</td>
+                            <td class="hash-cell">${formatAddress(transfer.from)}</td>
+                            <td class="hash-cell">${formatAddress(transfer.to)}</td>
+                            <td style="color: var(--text);">${transfer.token || 'N/A'}</td>
+                            <td style="color: var(--text-dim);">${formatNumber(transfer.amount || 0)}</td>
+                            <td class="timestamp" data-timestamp="${transfer.timestamp}">${formatTimestamp(transfer.timestamp)}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table>';
+                container.innerHTML = html;
+                container.dataset.loading = 'false';
+            } catch (error) {
+                container.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                container.dataset.loading = 'false';
+            }
+        }
+
+        // Initial load
+        loadStats();
+        loadBlocks();
+
+        // Connect WebSocket for real-time updates
+        connectWebSocket();
+
+        // Aggressive polling every 100ms for millisecond-level updates (like hypurrscan.io)
+        setInterval(() => {
+            loadStats(); // Always update stats
+            
+            const activeTab = document.querySelector('.tab.active');
+            if (activeTab) {
+                const tabName = activeTab.textContent.toLowerCase();
+                const contentEl = document.getElementById(`${tabName}-content`);
+                if (contentEl && !contentEl.dataset.loading) {
+                    if (tabName === 'blocks') {
+                        loadBlocks();
+                    } else if (tabName === 'validators') {
+                        loadValidators();
+                    } else if (tabName === 'vaults') {
+                        loadVaults();
+                    } else if (tabName === 'transfers') {
+                        loadTransfers();
+                    }
+                }
+            }
+        }, 3000); // Poll every 3 seconds for real-time updates
+
+        // Modal Functions
+        function closeModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('details-modal').classList.remove('active');
+        }
+
+        async function showBlockDetails(blockNumber, blockHash) {
+            const modal = document.getElementById('details-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+            
+            modalTitle.textContent = `Block #${blockNumber}`;
+            modalBody.innerHTML = '<div class="loading">Loading block details...</div>';
+            modal.classList.add('active');
+
+            try {
+                const blocks = await fetchAPI(`/blocks?limit=1000`);
+                const block = blocks.find(b => b.blockNumber === blockNumber || b.blockHash === blockHash);
+                
+                if (!block) {
+                    modalBody.innerHTML = '<div class="error">Block not found</div>';
+                    return;
+                }
+
+                const blockData = JSON.parse(block.data || '{}');
+                let html = '';
+
+                html += `<div class="detail-row"><div class="detail-label">Block Number:</div><div class="detail-value">${block.blockNumber}</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">Block Hash:</div><div class="detail-value">${block.blockHash}</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">Timestamp:</div><div class="detail-value">${new Date(block.timestamp * 1000).toLocaleString()}</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">Transaction Count:</div><div class="detail-value">${block.txCount}</div></div>`;
+                if (blockData.proposer) {
+                    html += `<div class="detail-row"><div class="detail-label">Proposer:</div><div class="detail-value">${blockData.proposer}</div></div>`;
+                }
+                html += `<div class="detail-row"><div class="detail-label">Full Data:</div><div class="detail-value"><pre>${JSON.stringify(blockData, null, 2)}</pre></div></div>`;
+
+                modalBody.innerHTML = html;
+            } catch (error) {
+                modalBody.innerHTML = `<div class="error">Error loading block details: ${error.message}</div>`;
+            }
+        }
+
+        async function showTransactionDetails(txHash) {
+            const modal = document.getElementById('details-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+            
+            modalTitle.textContent = `Transaction Details`;
+            modalBody.innerHTML = '<div class="loading">Loading transaction details...</div>';
+            modal.classList.add('active');
+
+            try {
+                const transaction = await fetchAPI(`/transactions/${txHash}`);
+                
+                if (!transaction) {
+                    modalBody.innerHTML = '<div class="error">Transaction not found</div>';
+                    return;
+                }
+
+                let html = '';
+                const actionData = transaction.actionData ? JSON.parse(transaction.actionData) : {};
+                const fullData = transaction.data ? JSON.parse(transaction.data) : {};
+
+                html += `<div class="detail-row"><div class="detail-label">Hash:</div><div class="detail-value">${transaction.hash}</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">Block Number:</div><div class="detail-value">${transaction.blockNumber}</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">Block Hash:</div><div class="detail-value">${transaction.blockHash}</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">User:</div><div class="detail-value">${transaction.user}</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">Action Type:</div><div class="detail-value">${transaction.actionType || 'unknown'}</div></div>`;
+                html += `<div class="detail-row"><div class="detail-label">Status:</div><div class="detail-value">${transaction.error ? '<span style="color: #ff4444">FAILED</span>' : '<span style="color: var(--text)">SUCCESS</span>'}</div></div>`;
+                if (transaction.error) {
+                    html += `<div class="detail-row"><div class="detail-label">Error:</div><div class="detail-value" style="color: #ff4444">${transaction.error}</div></div>`;
+                }
+                html += `<div class="detail-row"><div class="detail-label">Timestamp:</div><div class="detail-value">${new Date(transaction.timestamp * 1000).toLocaleString()}</div></div>`;
+                if (Object.keys(actionData).length > 0) {
+                    html += `<div class="detail-row"><div class="detail-label">Action Data:</div><div class="detail-value"><pre>${JSON.stringify(actionData, null, 2)}</pre></div></div>`;
+                }
+                if (Object.keys(fullData).length > 0) {
+                    html += `<div class="detail-row"><div class="detail-label">Full Transaction Data:</div><div class="detail-value"><pre>${JSON.stringify(fullData, null, 2)}</pre></div></div>`;
+                }
+
+                modalBody.innerHTML = html;
+            } catch (error) {
+                modalBody.innerHTML = `<div class="error">Error loading transaction details: ${error.message}</div>`;
+            }
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
